@@ -4,8 +4,9 @@ import java.nio.charset.CodingErrorAction
 
 import org.apache.log4j._
 import org.apache.spark._
+import org.apache.spark.broadcast.Broadcast
 
-import scala.io.Codec
+import scala.io.{Codec, Source}
 
 /** Find the movies with the most ratings (data goes to 1998).
   *
@@ -26,7 +27,8 @@ object PopularMovies {
 
     // Create a SparkContext using every core of the local machine
     val sc = new SparkContext("local[*]", "PopularMovies")
-
+    // Create a broadcast variable of our ID -> movie name map
+    val nameDict: Broadcast[Map[Int, String]] = sc.broadcast(loadMovieNames())
     // Read in each rating line
     val lines = sc.textFile("data/ml-100k/u.data")
 
@@ -42,8 +44,11 @@ object PopularMovies {
     // Sort
     val sortedMovies = flipped.sortByKey()
 
+    // Fold in the movie names from the broadcast variable
+    val sortedMoviesWithNames = sortedMovies.map( x  => (nameDict.value(x._2), x._1) )
+
     // Collect and print results
-    val results = sortedMovies.collect()
+    val results = sortedMoviesWithNames.collect()
 
     // will print most popular movie based on how many times it was rated
     results.foreach(println)
@@ -73,6 +78,20 @@ object PopularMovies {
     *
     * @return movieId -> movieName map
     */
-  def loadMovieNames(): Map[Int, String] = ???
+  def loadMovieNames(): Map[Int, String] = {
+
+    // Create a Map of Ints to Strings, and populate it from u.item.
+    var movieNames:Map[Int, String] = Map()
+
+    val lines = Source.fromFile("data/ml-100k/u.item").getLines()
+    for (line <- lines) {
+      val fields = line.split('|')
+      if (fields.length > 1) {
+        movieNames += (fields(0).toInt -> fields(1))
+      }
+    }
+
+    movieNames
+  }
 }
 

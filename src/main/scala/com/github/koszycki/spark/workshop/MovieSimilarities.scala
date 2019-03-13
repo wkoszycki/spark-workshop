@@ -102,28 +102,31 @@ object MovieSimilarities {
     val data = sc.textFile("data/ml-100k/u.data")
 
     // Map ratings to key / value pairs: user ID => movie ID, rating
-//    val ratings = data.map???
+    val ratings = data.map(l => l.split("\t")).map(l => (l(0).toInt, (l(1).toInt, l(2).toDouble)))
 
     // Emit every movie rated together by the same user.
     // Self-join to find every combination.
-//    val joinedRatings = ratings.???
+    val joinedRatings = ratings.join(ratings)
 
     // At this point our RDD consists of userID => ((movieID, rating), (movieID, rating))
 
     // Filter out duplicate pairs
-//    val uniqueJoinedRatings = joinedRatings.filter(filterDuplicates)
+    val uniqueJoinedRatings = joinedRatings.filter(filterDuplicates)
 
     // Now key by (movie1, movie2) pairs.
-//    val moviePairs = uniqueJoinedRatings.map(makePairs)
+    val moviePairs = uniqueJoinedRatings.map(makePairs)
 
     // We now have (movie1, movie2) => (rating1, rating2)
     // Now collect all ratings for each movie pair and compute similarity
-//    val moviePairRatings = moviePairs. // group ...
+    val moviePairRatings = moviePairs.groupByKey()
 
     // We now have (movie1, movie2) = > (rating1, rating2), (rating1, rating2) ...
     // Can now compute similarities.
-//    val moviePairSimilarities = moviePairRatings.
+    val moviePairSimilarities = moviePairRatings.mapValues(computeCosineSimilarity).cache()
 
+    //Save the results if desired
+    //val sorted = moviePairSimilarities.sortByKey()
+    //sorted.saveAsTextFile("movie-sims")
 
     // Extract similarities for the movie we care about that are "good".
 
@@ -136,27 +139,27 @@ object MovieSimilarities {
       // Filter for movies with this sim that are "good" as defined by
       // our quality thresholds above     
 
-//      val filteredResults = moviePairSimilarities.filter(x => {
-//        val pair = x._1
-//        val sim = x._2
-//        (pair._1 == movieID || pair._2 == movieID) && sim._1 > scoreThreshold && sim._2 > coOccurenceThreshold
-//      }
-//      )
+      val filteredResults = moviePairSimilarities.filter(x => {
+        val pair = x._1
+        val sim = x._2
+        (pair._1 == movieID || pair._2 == movieID) && sim._1 > scoreThreshold && sim._2 > coOccurenceThreshold
+      }
+      )
 
       // Sort by quality score.
-//      val results = filteredResults.map
+      val results = filteredResults.map(x => (x._2, x._1)).sortByKey(ascending = false).take(10)
 
       println("\nTop 10 similar movies for " + nameDict(movieID))
-//      for (result <- results) {
-//        val sim = result._1
-//        val pair = result._2
-//        // Display the similarity result that isn't the movie we're looking at
-//        var similarMovieID = pair._1
-//        if (similarMovieID == movieID) {
-//          similarMovieID = pair._2
-//        }
-//        println(nameDict(similarMovieID) + "\tscore: " + sim._1 + "\tstrength: " + sim._2)
-//      }
+      for (result <- results) {
+        val sim = result._1
+        val pair = result._2
+        // Display the similarity result that isn't the movie we're looking at
+        var similarMovieID = pair._1
+        if (similarMovieID == movieID) {
+          similarMovieID = pair._2
+        }
+        println(nameDict(similarMovieID) + "\tscore: " + sim._1 + "\tstrength: " + sim._2)
+      }
     }
   }
 }

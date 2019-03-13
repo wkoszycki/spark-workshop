@@ -11,18 +11,18 @@ object WordCount {
 
     // Set the log level to only print errors
     Logger.getLogger("org").setLevel(Level.ERROR)
-
+    val filteredWords = Set("an","a","the","to","i")
     // Create a SparkContext using every core of the local machine
     val sc = new SparkContext("local[*]", "WordCount")
     // load file
     val textFile = sc.textFile("data/pride_and_preduce.txt")
     // split words
-    val wordsSplitted = textFile.flatMap(line => line.split(" "))
+    val wordsSplitted = textFile.flatMap(line => line.split("\\W+"))
     // count of occurrences
-    val counts = wordsSplitted.map(word => (word, 1))
+    val counts = wordsSplitted.filter(s=> !filteredWords.contains(s)).map(word => (word.toLowerCase, 1))
       .reduceByKey(_ + _)
 
-    val result = counts.countByValue()
+    val result = counts.collect().sortBy(t => t._2)(Ordering[Int].reverse)
 
     result.foreach { tuple =>
       println(s"${tuple._1} - ${tuple._2} ")
