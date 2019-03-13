@@ -1,0 +1,271 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>reveal.js</title>
+
+    <link rel="stylesheet" href="css/reveal.css">
+    <link rel="stylesheet" href="css/theme/simple.css">
+
+    <!-- Theme used for syntax highlighting of code -->
+    <link rel="stylesheet" href="lib/css/zenburn.css">
+
+    <!-- Printing and PDF exports -->
+    <script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+
+    </script>
+    <style>
+     h1 {
+         font-size: 2.2em !important;
+         padding: 1em;
+     }
+     li {
+         font-size: 0.8em !important;
+     }
+     code {
+         font-size: 0.5em !important;
+         line-height: normal !important;
+     }
+
+    </style>
+</head>
+<body>
+<div class="reveal">
+    <div class="slides">
+        <section>
+            <h1>Prehistoria</h1>
+            <ul>
+                <li>The Google File System (2003)</li>
+                <li>MapReduce: Simplified Data Processing on Large Clusters (2004)</li>
+                <li>Hadoop jako implementacja Open Source bazująca na tych artykułach (2006)</li>
+            </ul>
+        </section>
+
+        <section>
+            <h1>HDFS</h1>
+            <ul>
+                <li>Dane podzielone na bloki (64MB)</li>
+                <li>Każdy blok replikowany (domyślnie 3 kopie)</li>
+                <li>NameNode vs DataNode</li>
+                <li>Dane przechowywane na DataNode</li>
+                <li>Mapowania ścieżka -> blok przechowywane na NameNode</li>
+            </ul>
+        </section>
+
+        <section>
+            <h1>HDFS - Architektura</h1>
+            <img src="hdfs-architecture.gif" style="width: 60%">
+        </section>
+
+        <section>
+            <h1>MapReduce</h1>
+            <ul>
+                <li>Dwie fazy:</li>
+                <li>Map: input -> list (key, value)</li>
+                <li>Reduce: (key, list(value)) -> list(value)</li>
+                <li>Dane z mapperów grupowane po kluczu i przekazywane do reducerów</li>
+                <li>Hash z klucza decyduje do którego reducera trafi dana para</li>
+            </ul>
+        </section>
+
+        <section>
+            <h1>MapReduce - WordCount</h1>
+            <img src="mapreduce-wordcount.png">
+        </section>
+
+        <section>
+            <h1>MapReduce c.d.</h1>
+            <ul>
+                <li>Lokalność - mappery tam gdzie bloki z danymi wejściowymi</li>
+                <li>Dane przechowywane przeważnie w formatach tekstowych, jako TSV</li>
+                <li>W przypadku wielkich plików dzielenie ich na mniejsze części</li>
+                <li>Brak mutowalnego stanu - możliwość odtwarzania</li>
+            </ul>
+        </section>
+
+        <section>
+            <h1>Hive</h1>
+            <ul>
+                <li>Projekt stworzony przez Facebooka (2010)</li>
+                <li>Opisy przetwarzania przy użyciu podzbioru SQL: HiveQL</li>
+                <li>Zapytania tłumaczone na ciąg MapReduce</li>
+                <li>Powolne - nawet proste zapytania trwały po kilkanaście - kilkadziesiąt sekund</li>
+                <li>Prosty język do opisywania przetwarzania</li>
+            </ul>
+        </section>
+
+        <section>
+            <h1>Problemy MapReduce</h1>
+            <ul>
+                <li>Konieczność zrzucania danych na dysk</li>
+                <li>Długi czas instrumentacji</li>
+                <li>Konieczność pisania klas Mappera i Reducera dla najprostszych rzeczy</li>
+                <li>... a czasem jeszcze Partitionera, opisu kolejności sortowania.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h1>Spark</h1>
+            <ul>
+                <li>RDD - Resilient Distributed Datasets</li>
+                <li>Dane przechowywane w RAM na Executorach, dopóki się mieszczą</li>
+                <li>Prosty DSL stworzony w Scali</li>
+                <li>Szybkie algorytmy iteracyjne</li>
+            </ul>
+        </section>
+
+        <section>
+            <h1>WordCount w MapReduce</h1>
+            <pre><code class="hljava" data-trim contenteditable>
+     public class WordCount {
+
+        public static class Map extends MapReduceBase implements Mapper&lt;LongWritable, Text, Text, IntWritable&gt; {
+          private final static IntWritable one = new IntWritable(1);
+          private Text word = new Text();
+
+          public void map(LongWritable key, Text value, OutputCollector&lt;Text, IntWritable&gt; output, Reporter reporter) throws IOException {
+            String line = value.toString();
+            StringTokenizer tokenizer = new StringTokenizer(line);
+
+            while (tokenizer.hasMoreTokens()) {
+              word.set(tokenizer.nextToken());
+              output.collect(word, one);
+            }
+          }
+        }
+
+        public static class Reduce extends MapReduceBase implements Reducer&lt;Text, IntWritable, Text, IntWritable&gt; {
+
+          public void reduce(Text key, Iterator values, OutputCollector&lt;Text, IntWritable&gt; output, Reporter reporter) throws IOException {
+
+            int sum = 0;
+
+            while (values.hasNext()) {
+              sum += values.next().get();
+            }
+            output.collect(key, new IntWritable(sum));
+          }
+        }
+					    </code></pre>
+        </section>
+
+        <section>
+            <h1>WordCount w Sparku</h1>
+            <pre><code class="hlscala" data-trim contenteditable>
+ val file = spark.textFile("hdfs://...")
+
+ val counts = file.flatMap(line => line.split(" "))
+                  .map(word => (word, 1))
+                  .reduceByKey(_ + _)
+
+ counts.saveAsTextFile("hdfs://...")
+					    </code></pre>
+        </section>
+
+        <section>
+            <h1>Spark - działanie</h1>
+            <ul>
+                <li>Dane pogrupowane na partycje (partitions)</li>
+                <li>Początkowo partycjonowane w zależności od miejsca, skąd zostały wczytane</li>
+                <li>Partycje nie zmieniają się przy prostych przekształceniach</li>
+                <li>Czasem jednak potrzebujemy je przegrupować (repartition), co wymaga shuffle - przesłania wszystkich danych przez sieć</li>
+                <li>Przykładowo <i>reduceByKey</i>: dane muszą zostać pogrupowane po kluczu</li>
+                <li>Shuffle jest operacją kosztowną, więc staramy się ją ograniczać</li>
+            </ul>
+        </section>
+
+        <section>
+            <h1>Spark - działanie c.d.</h1>
+            <ul>
+                <li>Operacje opisane w DSL nie są wykonywane od razu</li>
+                <li>Tworzony jest graf zależności</li>
+                <li>Dopiero użycie operacji zapisującej wynik uruchamia obliczenia</li>
+            </ul>
+        </section>
+
+        <section>
+            <h1>DataFrames</h1>
+            <ul>
+                <li>Abstrakcja zbudowana na RDD przechowująca dane w formie wierszy / kolumn</li>
+                <li>Spark SQL - język bazujący na HiveQL pozwalający opisywać przetwarzanie danych</li>
+                <li>... ale można też używać specjalnego DSLa, odrębnego od RDD</li>
+                <li>RDD: data.filter(_.year > 2015), DataFrames: data.where(data("year") > 2015)</li>
+            </ul>
+        </section>
+
+        <section>
+            <h1>Zalety DataFrames</h1>
+            <ul>
+                <li>Optymalizacje przetwarzania (codename Tungsten):
+                    <ul>
+                        <li>Optymalizacja planu wykonania, z heurystykami typu predicate pushdown</li>
+                        <li>Trzymanie danych off-heap w formie kolumnowej</li>
+                        <li>Stage code generation + JIT</li>
+                    </ul>
+                </li>
+                <li>Ujednolicony interfejs dla Scali/Javy, Pythona i R</li>
+            </ul>
+        </section>
+
+        <section>
+            <h1>Tungsten codegen + JIT</h1>
+            <img src="tungsten-codegen.png">
+        </section>
+
+        <section>
+            <h1>Columnar layout</h1>
+            <img src="columnar-storage.png" style="width: 44%">
+            <li>Możliwość podmiany jednej kolumny, bez nadpisywania całych wierszy</li>
+            <li>Lepsza utylizacja cache</li>
+        </section>
+
+        <section>
+            <h1>DataSets</h1>
+            <ul>
+                <li>Brak informacji na temat typów kolumn w DataFrame w trakcie kompilacji</li>
+                <li>DataSet - widok na DataFrame tłumaczony na jakiś tym Scalowy</li>
+                <li>DataSet[T] wymaga dostarczenia obiektu Encoder[T] - typu zajmującego się tłumaczeniem w obie strony</li>
+                <li>Dla podstawowych typów, krotek (tuples) oraz case klas jest domyślna implementacja dostarczana w przezroczysty sposób</li>
+                <li>DataFrame = DataSet[InternalRow]</li>
+            </ul>
+        </section>
+
+        <section>
+            <h1>Dodatki do Sparka</h1>
+            <ul>
+                <li>MLlib - algorytmy Machine Learning oraz statystyczne</li>
+                <li>GraphX - rozproszone algorytmy grafowe (wciąż bazuje na RDD)</li>
+                <li>Spark Streaming - przestarzały framework do algorytmów strumieniowych, obecnie zastąpiony przez tzw. Structured Streaming wbudowany w
+                    DataSets
+                </li>
+            </ul>
+        </section>
+    </div>
+</div>
+
+<script src="lib/js/head.min.js"></script>
+<script src="js/reveal.js"></script>
+
+<script>
+			// More info about config & dependencies:
+			// - https://github.com/hakimel/reveal.js#configuration
+			// - https://github.com/hakimel/reveal.js#dependencies
+			Reveal.initialize({
+				dependencies: [
+					{ src: 'plugin/markdown/marked.js' },
+					{ src: 'plugin/markdown/markdown.js' },
+					{ src: 'plugin/notes/notes.js', async: true },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+				]
+			});
+
+</script>
+</body>
+</html>

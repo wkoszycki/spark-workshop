@@ -1,0 +1,177 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>reveal.js</title>
+
+    <link rel="stylesheet" href="css/reveal.css">
+    <link rel="stylesheet" href="css/theme/simple.css">
+
+    <!-- Theme used for syntax highlighting of code -->
+    <link rel="stylesheet" href="lib/css/zenburn.css">
+
+    <!-- Printing and PDF exports -->
+    <script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+
+
+
+
+
+
+
+
+    </script>
+    <style>
+     h1 {
+         font-size: 2.2em !important;
+         padding: 1em;
+     }
+     li {
+         font-size: 0.8em !important;
+     }
+     code {
+         font-size: 0.5em !important;
+         line-height: normal !important;
+     }
+
+
+
+
+
+
+
+
+    </style>
+</head>
+<body>
+<div class="reveal">
+    <div class="slides">
+
+        <section>
+            <h1>SUPERHERO SOCIAL NETWORK</h1>
+            <img src="super_heroes.png">
+        </section>
+        <section>
+            <h1>DEGREES OF SEPARATION</h1>
+            <img src="super_heroes.png">
+            <ul>
+                <li>Iron man 1 degree from Hulk</li>
+                <li>Iron man 2 degrees from Spiderman</li>
+            </ul>
+        </section>
+        <section>
+            <h1>INPUT DATA FORMAT</h1>
+            <img src="input_data.png">
+
+        </section>
+        <section>
+            <h1>Building a graph</h1>
+            <pre><code style="font-size: 16px !important">
+     // Build up our vertices
+    val names = sc.textFile("../marvel-names.txt")
+    val verts = names.flatMap(parseNames)
+
+    // Build up our edges
+    val lines = sc.textFile("../marvel-graph.txt")
+    val edges = lines.flatMap(makeEdges)
+
+    // Build up our graph, and cache it as we're going to do a bunch of stuff with it.
+    val default = "Nobody"
+    val graph = Graph(verts, edges, default).cache()
+        </code></pre>
+        </section>
+        <section>
+            <h1>DOING STUFF </h1>
+            <ul>
+                <li>Top 10 most-connected heroes:</li>
+            </ul>
+            <pre><code style="font-size: 16px !important">
+        graph.degrees.join(verts).sortBy(_._2._1, ascending=false).take(10).foreach(println)
+        </code></pre>
+        </section>
+        <section>
+            <h1>BFS INITIALIZATION</h1>
+            <ul>
+                <li><a href="https://www.geeksforgeeks.org/breadth-first-search-or-bfs-for-a-graph/">What is BFS</a></li>
+            </ul>
+            <pre><code style="font-size: 16px !important">
+            // Initialize each node with a distance of infinity, unless it's our starting point
+            val initialGraph = graph.mapVertices((id, _) => if (id == root) 0.0 else Double.PositiveInfinity)
+        </code></pre>
+            <img src="bfs_init.png">
+        </section>
+        <section>
+            <h1>SENDING MESSAGES</h1>
+            <ul>
+                <li><a href="https://www.geeksforgeeks.org/breadth-first-search-or-bfs-for-a-graph/">What is BFS</a></li>
+            </ul>
+            <pre><code style="font-size: 16px !important">
+        triplet => {
+          if (triplet.srcAttr != Double.PositiveInfinity) {
+            Iterator((triplet.dstId, triplet.srcAttr+1))
+          } else {
+            Iterator.empty
+          }
+        }
+        </code></pre>
+            <img src="bfs_send_msg.png">
+        </section>
+        <section>
+            <h1>PRESERVING THE MINIMUM DISTANCE AT EACH STEP (shortest path)</h1>
+            <ul>
+                <li>
+                    Pregel's vertex program will preserve the minimum distance
+                    between the one it receives and what it has:
+                </li>
+            </ul>
+            <pre><code style="font-size: 16px !important">
+        (id, attr, msg) => math.min(attr, msg)
+
+        </code></pre>
+            <ul>
+                <li>
+                    Its reduce operation preserves the minimum distance if multiple
+                    messages are received for the same vertex:
+                </li>
+            </ul>
+            <pre><code style="font-size: 16px !important">
+        (a,b) => math.min(a,b)
+
+        </code></pre>
+        </section>
+    </div>
+</div>
+
+<script src="lib/js/head.min.js"></script>
+<script src="js/reveal.js"></script>
+
+<script>
+			// More info about config & dependencies:
+			// - https://github.com/hakimel/reveal.js#configuration
+			// - https://github.com/hakimel/reveal.js#dependencies
+			Reveal.initialize({
+				dependencies: [
+					{ src: 'plugin/markdown/marked.js' },
+					{ src: 'plugin/markdown/markdown.js' },
+					{ src: 'plugin/notes/notes.js', async: true },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+				]
+			});
+
+
+
+
+
+
+
+
+</script>
+</body>
+</html>

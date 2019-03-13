@@ -1,0 +1,154 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>reveal.js</title>
+
+    <link rel="stylesheet" href="css/reveal.css">
+    <link rel="stylesheet" href="css/theme/simple.css">
+
+    <!-- Theme used for syntax highlighting of code -->
+    <link rel="stylesheet" href="lib/css/zenburn.css">
+
+    <!-- Printing and PDF exports -->
+    <script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+
+
+
+
+
+
+
+    </script>
+    <style>
+     h1 {
+         font-size: 2.2em !important;
+         padding: 1em;
+     }
+     li {
+         font-size: 0.8em !important;
+     }
+     code {
+         font-size: 0.5em !important;
+         line-height: normal !important;
+     }
+
+
+
+
+
+
+
+    </style>
+</head>
+<body>
+<div class="reveal">
+    <div class="slides">
+        <section>
+            <h1>Item based collaborative filtering</h1>
+            <ul>
+                <li>algorithms for recommendations</li>
+                <li>2 movies seen together might be similar in someway</li>
+                <li>can be used further for providing recommendations</li>
+            </ul>
+        </section>
+
+        <section>
+            <h1>Spark Streaming</h1>
+            <ul>
+                <li>Analyzes continual streams of data Common example: processing log data from a website or server Data is aggregated and analyzed at some
+                    given interval
+                </li>
+                <li>Can take data fed to some port, Amazon Kinesis, HDFS, Kafka, Flume, and others "Checkpointing" stores state to disk periodically for fault
+                    tolerance
+                </li>
+            </ul>
+        </section>
+
+        <section>
+            <h1>Spark Streaming</h1>
+            <ul>
+                <li>A "Dstream" object breaks up the stream into distinct RDD's Simple example:</li>
+            </ul>
+            <pre><code style="font-size: 16px !important">
+                val stream = new StreamingContext(conf, Seconds(1))
+                val lines = stream socketTextStream("localhost", 8888)
+                val errors = lines.filter(_.contains("error"))
+                errors.print()
+                </code></pre>
+
+        </section>
+
+        <section>
+            <h1>Spark Streaming</h1>
+            <ul>
+                <li>This listens to log data sent into port 8888, one second at a time, and prints out error lines.</li>
+                <li>You need to kick off the job explicitly: stream.start() stream.awaitTermination()</li>
+            </ul>
+        </section>
+
+
+        <section>
+            <h1>Spark Streaming</h1>
+            <ul>
+                <li>Remember your RDD's only contain one little chunk of incoming data.</li>
+                <li>"Windowed operations" can combine results from multiple batches over some sliding time window
+                    See window(), reduceByWindow(), reduce ByKeyAndWindow()
+                </li>
+                <li>updateStateByKey() Lets you maintain a state across many batches as time goes on
+                    For example, running counts of some event
+                </li>
+            </ul>
+        </section>
+        <section>
+            <h1>Structured Streaming</h1>
+            <ul>
+                <li>Spark 2.0.0 introduced "structured streaming" as an experimental feature.</li>
+                <li>Uses DataSets as its primary API (much of Spark is going this way) Imagine a DataSet that just keeps getting appended to forever, and you
+                    query it whenever you want.
+                </li>
+            </ul>
+            <pre><code style="font-size: 16px !important">
+                val inputDF = spark.readStream.json("s3://logs")
+                inputDF
+                    .groupBy("action", window($"time", "1 hour"))
+                    .count()
+                    .writeStream.format("jdbc")
+                    .start(jdbc:mysql//...")
+            </code></pre>
+        </section>
+    </div>
+</div>
+
+<script src="lib/js/head.min.js"></script>
+<script src="js/reveal.js"></script>
+
+<script>
+			// More info about config & dependencies:
+			// - https://github.com/hakimel/reveal.js#configuration
+			// - https://github.com/hakimel/reveal.js#dependencies
+			Reveal.initialize({
+				dependencies: [
+					{ src: 'plugin/markdown/marked.js' },
+					{ src: 'plugin/markdown/markdown.js' },
+					{ src: 'plugin/notes/notes.js', async: true },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+				]
+			});
+
+
+
+
+
+
+
+</script>
+</body>
+</html>

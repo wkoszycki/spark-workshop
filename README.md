@@ -1,4 +1,4 @@
-# Spark hands on introdcution
+# Spark hands on introduction
 This repository contains slides and code used for hands on spark introduction workshop conducted by me.
 
 ## Setup local environment

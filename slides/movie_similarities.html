@@ -1,0 +1,128 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>reveal.js</title>
+
+    <link rel="stylesheet" href="css/reveal.css">
+    <link rel="stylesheet" href="css/theme/simple.css">
+
+    <!-- Theme used for syntax highlighting of code -->
+    <link rel="stylesheet" href="lib/css/zenburn.css">
+
+    <!-- Printing and PDF exports -->
+    <script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+
+
+    </script>
+    <style>
+     h1 {
+         font-size: 2.2em !important;
+         padding: 1em;
+     }
+     li {
+         font-size: 0.8em !important;
+     }
+     code {
+         font-size: 0.5em !important;
+         line-height: normal !important;
+     }
+
+
+    </style>
+</head>
+<body>
+<div class="reveal">
+    <div class="slides">
+        <section>
+            <h1>Item based collaborative filtering</h1>
+            <ul>
+                <li>algorithms for recommendations</li>
+                <li>2 movies seen together might be similar in someway</li>
+                <li>can be used further for providing recommendations</li>
+            </ul>
+        </section>
+        <section>
+            <h1>Item based collaborative filtering</h1>
+            <ul>
+                <li>Find every pair of movies that were watched by the same personMeasure the similarity of their ratings across all users who</li>
+                <li>Measure the similarity of their ratings across all users who watched both</li>
+                <li>Sort by movie, then by similarity strength</li>
+            </ul>
+        </section>
+        <section>
+            <h1>Item based collaborative filtering</h1>
+            <ul>
+                <img src="movie-similarities.png ">
+            </ul>
+        </section>
+        <section>
+            <h1>Making it a spark problem</h1>
+            <ul>
+                <li>Map input ratings to (userlD, (movielD, rating))</li>
+                <li>Find every movie pair rated by the same user</li>
+                <ul>
+                    <li>This can be done with a "self-join" operation</li>
+                    <li>At this point we have (userlD, ((movielD1, ratingl), (movielD2, rating2)))</li>
+                </ul>
+                <li>Filter out duplicate pairs</li>
+                <li>Make the movie pairs the key</li>
+                <ul>
+                    <li>map to ((movielD1, movielD2), (ratingl, rating2))</li>
+                </ul>
+                <li>groupByKey() to get every rating pair found for each movie pair</li>
+                <li>Compute similarity between ratings for each movie in the pair</li>
+                <li>Sort, save, and display results.</li>
+
+            </ul>
+        </section>
+        <section>
+            <h1>Caching RDD</h1>
+            <ul>
+                <li>In this example, we'll query the final RDD of movie similarities a
+                    couple of times
+                </li>
+
+                <li>Any time you will perform more than one action on an RDD, you
+                    must cache it!
+                </li>
+                Otherwise, Spark might re-evaluate the entire RDD all over again!
+                <li>Use .cache() or .persist() to do this.</li>
+                <li>What's the difference?.</li>
+                <li>Persist() optionally lets you cache it to disk instead of just memory,
+                    just in case a node fails or something.
+                </li>
+
+            </ul>
+        </section>
+
+    </div>
+</div>
+
+<script src="lib/js/head.min.js"></script>
+<script src="js/reveal.js"></script>
+
+<script>
+			// More info about config & dependencies:
+			// - https://github.com/hakimel/reveal.js#configuration
+			// - https://github.com/hakimel/reveal.js#dependencies
+			Reveal.initialize({
+				dependencies: [
+					{ src: 'plugin/markdown/marked.js' },
+					{ src: 'plugin/markdown/markdown.js' },
+					{ src: 'plugin/notes/notes.js', async: true },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+				]
+			});
+
+
+</script>
+</body>
+</html>
