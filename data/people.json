@@ -1,3 +1,3 @@
-{"name":"Michael"}
-{"name":"Andy", "age":30}
-{"name":"Justin", "age":19}
+{"id":1,"name":"Michael", "age": 24,, "numFriends" : 1}
+{"id":2,"name":"Andy", "age":30, "numFriends" : 3}
+{"id":3,"name":"Justin", "age":19, "numFriends" : 2}
